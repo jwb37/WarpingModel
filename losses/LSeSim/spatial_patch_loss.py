@@ -5,7 +5,6 @@ import torchvision.models as models
 import numpy as np
 
 from ..init_net import init_net
-from .spatial_transformation_layer import SpatialTransformationLayer
 
 
 class PatchSim(nn.Module):
@@ -69,7 +68,7 @@ class SpatialCorrelativeLoss(nn.Module):
     """
     learnable patch-based spatially-correlative loss with contrastive learning
     """
-    def __init__(self, loss_mode='cos', patch_nums=256, patch_size=32, norm=True, use_attn=True, attn_type='conv',
+    def __init__(self, loss_mode='cos', patch_nums=256, patch_size=32, norm=True, use_attn=True,
                  init_type='normal', init_gain=0.02, gpu_ids=[], T=0.1):
         super(SpatialCorrelativeLoss, self).__init__()
         self.patch_sim = PatchSim(patch_nums=patch_nums, patch_size=patch_size, norm=norm)
@@ -77,7 +76,6 @@ class SpatialCorrelativeLoss(nn.Module):
         self.patch_nums = patch_nums
         self.norm = norm
         self.use_attn = use_attn
-        self.attn_type = attn_type
         self.init_type = init_type
         self.init_gain = init_gain
         self.gpu_ids = gpu_ids
@@ -93,22 +91,11 @@ class SpatialCorrelativeLoss(nn.Module):
         :param layer: different layers use different filter
         :return:
         """
-        attn_layers = []
-        if self.attn_type.lower() == 'conv' or self.attn_type.lower() == 'both':
-            attn_layers.append( ConvAttentionLayer() )
-        if self.attn_type.lower() == 'spatialtransform' or self.attn_type.lower() == 'both':
-            attn_layers.append( SpatialTransformationLayer() )
+        net = ConvAttentionLayer()
+        net.build_net(feat)
+        net.init_params(self.init_type, self.init_gain, self.gpu_ids)
 
-        if not attn_layers:
-            raise ValueError("Command line option attn_type given as '%s'. It must be one of: conv, both, spatialtransform" % self.loss_mode)
-
-        for l in attn_layers:
-            l.build_net(feat)
-            feat = l(feat)
-            l.init_params(self.init_type, self.init_gain, self.gpu_ids)
-
-        attn_net = nn.Sequential(*attn_layers)
-        setattr(self, 'attn_%d' % layer, attn_net)
+        setattr(self, 'attn_%d' % layer, net)
 
     def cal_sim(self, f_src, f_tgt, f_other=None, layer=0, patch_ids=None):
         """
