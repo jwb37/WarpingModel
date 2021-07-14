@@ -1,4 +1,4 @@
-from .init_net import init_net
+from ..init_net import init_net
 import torch.nn as nn
 import torch.nn.functional as F
 

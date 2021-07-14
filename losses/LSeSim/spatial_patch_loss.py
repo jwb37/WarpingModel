@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 import numpy as np
 
-from .init_net import init_net
+from ..init_net import init_net
 from .spatial_transformation_layer import SpatialTransformationLayer
 
 
