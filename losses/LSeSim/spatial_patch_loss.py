@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 import numpy as np
 
+import Params
 from ..init_net import init_net
 
 
@@ -68,7 +69,7 @@ class SpatialCorrelativeLoss(nn.Module):
     """
     learnable patch-based spatially-correlative loss with contrastive learning
     """
-    def __init__(self, loss_mode='cos', patch_nums=256, patch_size=32, norm=True, use_attn=True,
+    def __init__(self, loss_mode='cos', patch_nums=64, patch_size=9, norm=True, use_attn=True,
                  init_type='normal', init_gain=0.02, gpu_ids=[], T=0.1):
         super(SpatialCorrelativeLoss, self).__init__()
         self.patch_sim = PatchSim(patch_nums=patch_nums, patch_size=patch_size, norm=norm)
@@ -83,21 +84,39 @@ class SpatialCorrelativeLoss(nn.Module):
         self.T = T
         self.criterion = nn.L1Loss() if norm else nn.SmoothL1Loss()
         self.cross_entropy_loss = nn.CrossEntropyLoss()
+        self.first_run = True
 
-    def create_attn(self, feat, layer):
+    def create_attn(self, feat):
         """
         create the attention mapping layer used to transform features before building similarity maps
         :param feat: extracted features from a pretrained VGG or encoder for the similarity and dissimilarity map
-        :param layer: different layers use different filter
         :return:
         """
         net = ConvAttentionLayer()
         net.build_net(feat)
         net.init_params(self.init_type, self.init_gain, self.gpu_ids)
+        self.attn = net
 
-        setattr(self, 'attn_%d' % layer, net)
+    def train_attn(self, real_A, fake_B, real_B):
+        """
+        Calculate the contrastive loss for learned spatially-correlative loss
+        """
+#        if self.opt.augment:
+#            real_A = torch.cat([real_A, real_A], dim=0)
+#            fake_B = torch.cat([fake_B.detach(), aug_A], dim=0)
+#            real_B = torch.cat([real_B, aug_B], dim=0)
+        for param in self.parameters():
+            param.requires_grad = True
+        self.optimizer.zero_grad()
 
-    def cal_sim(self, f_src, f_tgt, f_other=None, layer=0, patch_ids=None):
+        loss_spatial = self.loss(real_A, fake_B.detach(), real_B)
+        loss_spatial.backward()
+        self.optimizer.step()
+
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def cal_sim(self, f_src, f_tgt, f_other=None, patch_ids=None):
         """
         calculate the similarity map using the fixed/learned query and key
         :param f_src: feature map from source domain
@@ -105,20 +124,14 @@ class SpatialCorrelativeLoss(nn.Module):
         :param f_other: feature map from other image (only used for contrastive learning for spatial network)
         :return:
         """
-        if self.use_attn:
-            if not hasattr(self, 'attn_%d' % layer):
-                self.create_attn(f_src, layer)
-            attn = getattr(self, 'attn_%d' % layer)
-            f_src, f_tgt = attn(f_src), attn(f_tgt)
-            f_other = attn(f_other) if f_other is not None else None
-        sim_src, patch_ids = self.patch_sim(f_src, patch_ids)
-        sim_tgt, patch_ids = self.patch_sim(f_tgt, patch_ids)
-        if f_other is not None:
-            sim_other, _ = self.patch_sim(f_other, patch_ids)
-        else:
-            sim_other = None
+        output_sims = [None, None, None]
 
-        return sim_src, sim_tgt, sim_other
+        for idx, feat in enumerate((f_src, f_tgt, f_other)):
+            if feat is not None:
+                feat = self.attn(feat) if self.use_attn else feat
+                output_sims[idx], patch_ids = self.patch_sim(feat, patch_ids)
+
+        return output_sims
 
     def compare_sim(self, sim_src, sim_tgt, sim_other):
         """
@@ -153,19 +166,26 @@ class SpatialCorrelativeLoss(nn.Module):
 
         return loss
 
-    def loss(self, f_src, f_tgt, f_other=None, layer=0):
+    def loss(self, f_src, f_tgt, f_other=None):
         """
         calculate the spatial similarity and dissimilarity loss for given features from source and target domain
         :param f_src: source domain features
         :param f_tgt: target domain features
         :param f_other: other random sampled features
-        :param layer:
         :return:
         """
-        sim_src, sim_tgt, sim_other = self.cal_sim(f_src, f_tgt, f_other, layer)
+        sim_src, sim_tgt, sim_other = self.cal_sim(f_src, f_tgt, f_other)
         # calculate the spatial similarity for source and target domain
         loss = self.compare_sim(sim_src, sim_tgt, sim_other)
         return loss
+
+    def forward(self, realA, warpedA, realB, warp_grid):
+        if self.first_run:
+            self.create_attn(warpedA)
+            self.optimizer = Params.create_optimizer(self.parameters())
+            self.first_run = False
+        self.train_attn(realA, warpedA, realB)
+        return self.loss(warpedA, realB)
 
 
 class ConvAttentionLayer(nn.Module):

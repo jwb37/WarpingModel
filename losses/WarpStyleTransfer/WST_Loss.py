@@ -12,8 +12,6 @@ class WST_Loss(nn.Module):
 
 
     def forward(self, featsA, warpedA, tensorB, warp_grid, patch_size=9):
-        for t in [featsA, warpedA, tensorB, warp_grid]:
-            print(t.size())
         corr = correlation_map(warpedA, tensorB, flatten=False)
 
         half_patch_size = (patch_size-1) // 2
