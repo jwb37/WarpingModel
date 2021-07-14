@@ -1,5 +1,3 @@
-import itertools
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,6 +10,7 @@ import Params
 from vgg19 import VGG19
 from WarpGenerator import WarpGenerator
 from Correlation import correlation_map
+from losses import get_loss_module
 
 
 class ImageWarpNet:
@@ -19,6 +18,7 @@ class ImageWarpNet:
         self.vggA = VGG19()
         self.vggB = VGG19()
         self.wg = WarpGenerator()
+        self.calc_loss = get_loss_module()
 
         for net in [self.vggA, self.vggB, self.wg]:
             net.to(Params.Device)
@@ -116,40 +116,13 @@ class ImageWarpNet:
         self.wg.train()
 
 
-    def calc_loss(self, tensorA, tensorB, warp_grid, patch_size=9):
-        warpedA = self.warpTensor(tensorA, warp_grid)
-        corr = correlation_map(warpedA, tensorB, flatten=False)
-
-        half_patch_size = (patch_size-1) // 2
-
-        N, H, W, _, _ = corr.size()
-        window = torch.zeros( (H, W), dtype=torch.bool )
-        window[:patch_size, :patch_size] = 1
-
-        loss = 0
-        patches = torch.zeros(N, patch_size**2)
-
-        iter_range = itertools.product(
-            range(half_patch_size, H - half_patch_size),
-            range(half_patch_size, W - half_patch_size)
-        )
-
-        for i, j in iter_range:
-            shifted_window = torch.roll(window, shifts=(i-half_patch_size, j-half_patch_size), dims=(0,1))
-            arr = corr[:, i, j, :, :]
-            for b in range(N):
-                patch = arr[b][shifted_window].flatten()
-                loss = loss - F.log_softmax(patch, dim=0).sum()
-
-        return loss
-
-
     def training_step(self, tensorA, tensorB):
         self.optimizer.zero_grad()
 
         warp_grid, featsA, featsB = self.calc_flow(tensorA, tensorB, return_feats=True)
+        warpedA = self.warpTensor(featsA, warp_grid)
 
-        loss = self.calc_loss(featsA, featsB, warp_grid)
+        loss = self.calc_loss(featsA, warpedA, featsB, warp_grid)
         loss.backward()
         self.optimizer.step()
 
