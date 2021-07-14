@@ -1,3 +1,4 @@
+from .init_net import init_net
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -18,47 +19,30 @@ def define_F(input_nc, netF, norm='batch', use_dropout=False, init_type='normal'
     return init_net(net, init_type, init_gain, gpu_ids)
 
 
-class Normalize(nn.Module):
-    def __init__(self, power=2):
-        super(Normalize, self).__init__()
-        self.power = power
-
-    def forward(self, x):
-        norm = x.pow(self.power).sum(1, keepdim=True).pow(1. / self.power)
-        out = x.div(norm + 1e-7)
-        return out
-
-
 class PoolingF(nn.Module):
     def __init__(self):
         super(PoolingF, self).__init__()
-        model = [nn.AdaptiveMaxPool2d(1)]
-        self.model = nn.Sequential(*model)
-        self.l2norm = Normalize(2)
+        self.model = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, x):
-        return self.l2norm(self.model(x))
+        return F.normalize(self.model(x))
 
 
 class ReshapeF(nn.Module):
     def __init__(self):
         super(ReshapeF, self).__init__()
-        model = [nn.AdaptiveAvgPool2d(4)]
-        self.model = nn.Sequential(*model)
-        self.l2norm = Normalize(2)
+        self.model = nn.AdaptiveAvgPool2d(4)
 
     def forward(self, x):
         x = self.model(x)
         x_reshape = x.permute(0, 2, 3, 1).flatten(0, 2)
-        return self.l2norm(x_reshape)
-
+        return F.normalize(x_reshape)
 
 class StridedConvF(nn.Module):
     def __init__(self, init_type='normal', init_gain=0.02, gpu_ids=[]):
         super().__init__()
         # self.conv1 = nn.Conv2d(256, 128, 3, stride=2)
         # self.conv2 = nn.Conv2d(128, 64, 3, stride=1)
-        self.l2_norm = Normalize(2)
         self.mlps = {}
         self.moving_averages = {}
         self.init_type = init_type
@@ -96,14 +80,13 @@ class StridedConvF(nn.Module):
         x = x - self.moving_averages[key]
         if use_instance_norm:
             x = F.instance_norm(x)
-        return self.l2_norm(x)
+        return F.normalize(x)
 
 
 class PatchSampleF(nn.Module):
     def __init__(self, use_mlp=False, init_type='normal', init_gain=0.02, nc=256, gpu_ids=[]):
         # potential issues: currently, we use the same patch_ids for multiple images in the batch
         super(PatchSampleF, self).__init__()
-        self.l2norm = Normalize(2)
         self.use_mlp = use_mlp
         self.nc = nc  # hard-coded
         self.mlp_init = False
@@ -143,7 +126,7 @@ class PatchSampleF(nn.Module):
                 mlp = getattr(self, 'mlp_%d' % feat_id)
                 x_sample = mlp(x_sample)
             return_ids.append(patch_id)
-            x_sample = self.l2norm(x_sample)
+            x_sample = F.normalize(x_sample)
 
             if num_patches == 0:
                 x_sample = x_sample.permute(0, 2, 1).reshape([B, x_sample.shape[-1], H, W])
