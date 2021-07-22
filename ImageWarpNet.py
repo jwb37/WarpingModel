@@ -49,7 +49,6 @@ class ImageWarpNet:
         tensB = self.img_transform(imgB).unsqueeze(0).to(Params.Device)
 
         flow = self.calc_flow(tensA, tensB)
-        flow = flow.movedim(1, -1)
 
         return self.warpImage(imgA, flow)
 
@@ -57,12 +56,18 @@ class ImageWarpNet:
     #-------------------------------------------------------------------------
     # Internals
 
-    def feats_to_warp_grid(self, f1, f2):
+    def feats_to_flow(self, f1, f2):
         corr = correlation_map(f1, f2)
         return self.wg( corr )
 
-    def warpTensor(self, tens, warp_grid):
-        return F.grid_sample(tens, warp_grid.movedim(1,-1), align_corners=False)
+    def warpTensor(self, tens, flow):
+        B, _, H, W = flow.size()
+        base_x = torch.linspace(-1,1,W).reshape(1, 1, W, 1).repeat(B,H,1,1)
+        base_y = torch.linspace(-1,1,H).reshape(1, H, 1, 1).repeat(B,1,W,1)
+        base_grid = torch.cat( (base_x, base_y), dim=-1 ).to(Params.Device)
+        warp_grid = base_grid + flow.movedim(1,-1)
+
+        return F.grid_sample(tens, warp_grid, align_corners=False)
 
     def calc_flow(self, tensorA, tensorB, return_feats=False):
         featsA = self.vggA(tensorA, ['pool4'] )
@@ -75,17 +80,17 @@ class ImageWarpNet:
             original_feats = (featsA.clone(), featsB.clone())
 
         batch_size = tensorA.size(0)
-        warp_grid = torch.zeros( (batch_size, 2, 16, 16) ).to(Params.Device)
-        warp_grid = warp_grid + self.feats_to_warp_grid(featsA, featsB)
+        flow = torch.zeros( (batch_size, 2, 16, 16) ).to(Params.Device)
+        flow = flow + self.feats_to_flow(featsA, featsB)
 
         for k in range(self.num_iterations):
-            featsA = self.warpTensor(featsA, warp_grid)
-            warp_grid = warp_grid + self.feats_to_warp_grid(featsA, featsB)
+            featsA = self.warpTensor(featsA, flow)
+            flow = flow + self.feats_to_flow(featsA, featsB)
 
         if return_feats:
-            return warp_grid, *original_feats
+            return flow, *original_feats
         else:
-            return warp_grid
+            return flow
 
     def warpImage(self, img, flow):
         orig_size = img.size
@@ -98,7 +103,7 @@ class ImageWarpNet:
         flow = F.interpolate(flow, size=(256,256), mode='bilinear')
 
         tens = img_transform(img).unsqueeze(0).to(Params.Device)
-        tens = F.grid_sample(tens, flow, align_corners=False)
+        tens = self.warpTensor(tens, flow)
 
         tens = tens[0,:,:,:]
         # PIL likes to have dimensions in order H x W x C
@@ -137,6 +142,8 @@ class ImageWarpNet:
         return loss.item()
         
     #-----------------------------------------------------
+    #  Save and load the model/optimizer parameters
+
     def save(self, filename):
         save_state = {
             'model': self.wg.state_dict(),
