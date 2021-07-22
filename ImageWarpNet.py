@@ -14,7 +14,7 @@ from losses import get_loss_module
 
 
 class ImageWarpNet:
-    def __init__(self, num_iterations=3, visualizer=None):
+    def __init__(self, visualizer=None):
         self.vggA = VGG19()
         self.vggB = VGG19()
         self.wg = WarpGenerator()
@@ -32,7 +32,7 @@ class ImageWarpNet:
                 param.requires_grad = False
             model.eval()
 
-        self.num_iterations = num_iterations
+        self.num_iterations = Params.NumWarpIterations
 
         self.img_transform = transforms.Compose([
             transforms.Resize( (256, 256) ),
@@ -85,6 +85,7 @@ class ImageWarpNet:
 
         for k in range(self.num_iterations):
             featsA = self.warpTensor(featsA, flow)
+            featsA = F.normalize(featsA)
             flow = flow + self.feats_to_flow(featsA, featsB)
 
         if return_feats:
@@ -127,10 +128,10 @@ class ImageWarpNet:
     def training_step(self, tensorA, tensorB, output_imgs=False):
         self.optimizer.zero_grad()
 
-        warp_grid, featsA, featsB = self.calc_flow(tensorA, tensorB, return_feats=True)
-        warpedA = self.warpTensor(featsA, warp_grid)
+        flow, featsA, featsB = self.calc_flow(tensorA, tensorB, return_feats=True)
+        warpedA = self.warpTensor(featsA, flow)
 
-        loss = self.calc_loss(featsA, warpedA, featsB, warp_grid)
+        loss = self.calc_loss(featsA, warpedA, featsB, flow)
         loss.backward()
         self.optimizer.step()
 
@@ -138,6 +139,7 @@ class ImageWarpNet:
             self.visualizer.add_tensor( 'featsA', featsA )
             self.visualizer.add_tensor( 'warpedA', warpedA )
             self.visualizer.add_tensor( 'featsB', featsB )
+            self.visualizer.add_tensor( 'flow', flow )
 
         return loss.item()
         

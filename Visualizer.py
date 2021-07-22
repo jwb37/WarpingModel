@@ -46,6 +46,8 @@ class Visualizer:
             img_np = img_np.transpose( (2,1,0) )   # CxHxW -> WxHxC
             if C != 3:
                 img_np = np.mean(img_np, -1, keepdims=False)     # Reduce non-rgb tensors to greyscale by taking mean activation value
+                img_np = normalize_image(img_np)
+
             img = Image.fromarray(img_np, mode=img_format)
             imgs.append(img)
 
@@ -60,3 +62,11 @@ class Visualizer:
             for batch_idx, img in enumerate(img_list):
                 fname = f"epoch({self.epoch})_iter({self.iter})_{img_name}_{batch_idx}.png"
                 img.save( os.path.join(self.save_path, fname) )
+
+
+def normalize_image(img):
+    minval = img.min()
+    maxval = img.max()
+    eps = 1e-8
+
+    return (img - minval) * 255 / (maxval - minval + eps)
