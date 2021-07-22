@@ -4,17 +4,19 @@ import torch.nn.functional as F
 import torchvision.models as models
 import numpy as np
 
+import random
+
 import Params
 from ..init_net import init_net
 
 
 class PatchSim(nn.Module):
     """Calculate the similarity in selected patches"""
-    def __init__(self, patch_nums=256, patch_size=None, norm=True):
+    def __init__(self):
         super(PatchSim, self).__init__()
-        self.patch_nums = patch_nums
-        self.patch_size = patch_size
-        self.use_norm = norm
+        self.patch_nums = Params.loss['num_patches']
+        self.patch_size = Params.loss['patch_size']
+        self.use_norm = Params.loss['use_norm']
 
     def forward(self, feat, patch_ids=None):
         """
@@ -69,22 +71,17 @@ class SpatialCorrelativeLoss(nn.Module):
     """
     learnable patch-based spatially-correlative loss with contrastive learning
     """
-    def __init__(self, loss_mode='cos', patch_nums=64, patch_size=9, norm=True, use_attn=True,
-                 init_type='normal', init_gain=0.02, gpu_ids=[], T=0.1):
+    def __init__(self, visualizer=None):
         super(SpatialCorrelativeLoss, self).__init__()
-        self.patch_sim = PatchSim(patch_nums=patch_nums, patch_size=patch_size, norm=norm)
-        self.patch_size = patch_size
-        self.patch_nums = patch_nums
-        self.norm = norm
-        self.use_attn = use_attn
-        self.init_type = init_type
-        self.init_gain = init_gain
-        self.gpu_ids = gpu_ids
-        self.loss_mode = loss_mode
-        self.T = T
-        self.criterion = nn.L1Loss() if norm else nn.SmoothL1Loss()
+        self.patch_sim = PatchSim()
+        self.use_attn = Params.loss['use_attn']
+        self.attn_init_info = Params.loss['attn_init_info']
+        self.loss_mode = Params.loss['ssim_compare_fn']
+        self.T = Params.loss['T']
+        self.criterion = nn.L1Loss() if Params.loss['use_norm'] else nn.SmoothL1Loss()
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.first_run = True
+        self.visualizer = visualizer
 
     def create_attn(self, feat):
         """
@@ -94,7 +91,7 @@ class SpatialCorrelativeLoss(nn.Module):
         """
         net = ConvAttentionLayer()
         net.build_net(feat)
-        net.init_params(self.init_type, self.init_gain, self.gpu_ids)
+        net.init_params( **self.attn_init_info )
         self.attn = net
 
     def train_attn(self, real_A, fake_B, real_B):
@@ -177,14 +174,23 @@ class SpatialCorrelativeLoss(nn.Module):
         sim_src, sim_tgt, sim_other = self.cal_sim(f_src, f_tgt, f_other)
         # calculate the spatial similarity for source and target domain
         loss = self.compare_sim(sim_src, sim_tgt, sim_other)
+        if self.visualizer:
+            chosen_patch_num = random.choice(range(Params.loss['num_patches']))
+
+            for name, ssim in (('SSim_WarpedA', sim_src), ('SSim_RealB', sim_tgt)):
+                out_ssim = ssim[:,chosen_patch_num,:]
+                out_ssim = out_ssim.view(-1, 1, Params.loss['patch_size'], Params.loss['patch_size'])
+                self.visualizer.add_tensor( name, out_ssim )
         return loss
 
     def forward(self, realA, warpedA, realB, warp_grid):
-        if self.first_run:
-            self.create_attn(warpedA)
-            self.optimizer = Params.create_optimizer(self.parameters())
-            self.first_run = False
-        self.train_attn(realA, warpedA, realB)
+        if self.use_attn:
+            if self.first_run:
+                self.create_attn(warpedA)
+                self.optimizer = Params.create_optimizer(self.parameters())
+                self.first_run = False
+            self.train_attn(realA, warpedA, realB)
+
         return self.loss(warpedA, realB)
 
 

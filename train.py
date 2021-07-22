@@ -1,4 +1,5 @@
 import Params
+from Visualizer import Visualizer
 from ImageWarpNet import ImageWarpNet
 from SketchyDataset import SketchyDataset
 
@@ -12,6 +13,8 @@ from tqdm import tqdm
 
 class Trainer:
     def __init__(self):
+        self.visualizer = Visualizer()
+
         self.load_dataset()
         self.create_model()
 
@@ -65,7 +68,7 @@ class Trainer:
 
 
     def create_model(self):
-        self.model = ImageWarpNet()
+        self.model = ImageWarpNet(visualizer=self.visualizer)
         self.model.prepare_training()
 
         if Params.UseScheduler:
@@ -78,12 +81,14 @@ class Trainer:
         for iter, data in enumerate(tqdm(self.train_dl)):
             imageA = data['imageA'].cuda()
             imageB = data['imageB'].cuda()
-            loss = self.model.training_step(imageA, imageB)
+
             self.total_iter += imageA.size(0)
+            self.visualizer.set_iter(epoch, self.total_iter)
+
+            loss = self.model.training_step(imageA, imageB)
 
             train_log_buffer.append(
-                f"Epoch {epoch+1} Iter {iter} TotalIter {self.total_iter} " \
-                f"Loss {loss:.3f}\n"
+                f"Epoch {epoch+1} Iter {iter} TotalIter {self.total_iter} Loss {loss:.3f}\n"
             )
 
             if self.total_iter > self.next_losslog_iter:
@@ -93,6 +98,8 @@ class Trainer:
 
                 train_log_buffer.clear()
                 self.next_losslog_iter = self.total_iter + Params.LossLogFreq
+
+            self.visualizer.save_images()
 
 
     def train(self):

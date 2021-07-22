@@ -14,11 +14,14 @@ from losses import get_loss_module
 
 
 class ImageWarpNet:
-    def __init__(self, num_iterations=3):
+    def __init__(self, num_iterations=3, visualizer=None):
         self.vggA = VGG19()
         self.vggB = VGG19()
         self.wg = WarpGenerator()
         self.calc_loss = get_loss_module()
+
+        self.visualizer = visualizer
+        self.calc_loss.visualizer = visualizer
 
         for net in [self.vggA, self.vggB, self.wg]:
             net.to(Params.Device)
@@ -116,7 +119,7 @@ class ImageWarpNet:
         self.wg.train()
 
 
-    def training_step(self, tensorA, tensorB):
+    def training_step(self, tensorA, tensorB, output_imgs=False):
         self.optimizer.zero_grad()
 
         warp_grid, featsA, featsB = self.calc_flow(tensorA, tensorB, return_feats=True)
@@ -126,8 +129,13 @@ class ImageWarpNet:
         loss.backward()
         self.optimizer.step()
 
-        return loss.item()
+        if self.visualizer:
+            self.visualizer.add_tensor( 'featsA', featsA )
+            self.visualizer.add_tensor( 'warpedA', warpedA )
+            self.visualizer.add_tensor( 'featsB', featsB )
 
+        return loss.item()
+        
     #-----------------------------------------------------
     def save(self, filename):
         save_state = {
