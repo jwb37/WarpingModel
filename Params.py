@@ -1,48 +1,18 @@
-import torch
+import sys
+import importlib
+import os.path as path
+from types import MethodType, ModuleType
 
-CheckpointDir = './checkpoints'
-CheckpointFreq = 1
+if len(sys.argv) <= 1:
+    module_name = 'Default'
+else:
+    module_name = sys.argv[1]
 
-ModelName = 'ImageWarpNet'
-Device = 'cuda'
+print(f"Importing parameters from {module_name}")
+Params = importlib.import_module('.' + module_name, package='experiments')
+Params.params_file_path = path.join('experiments', module_name)
 
-CropSize = 256
-BatchSize = 16
-NumEpochs = 40
-NumWarpIterations = 0
-#ContinueTrain = True
-
-LossLogFreq = 1000
-VisualizerFreq = 1000
-VisualizerNumExemplars = 1
-
-# Learning Rate
-create_optimizer = lambda params: torch.optim.SGD(params, lr=0.02) #, betas=(0.5, 0.999))
-UseScheduler = False
-create_scheduler = lambda optimizer: torch.optim.lr_scheduler.StepLR(optimizer, NumEpochs // 3, gamma=0.1)
-
-# Loss function
-loss = {
-    'type': 'LSeSim',
-    'num_patches': 64,
-    'patch_size': 9,
-    'use_attn': True,
-    'use_norm': True,
-    'ssim_compare_fn': 'cos',
-    'T': 0.1,
-    'attn_init_info': {
-        'init_type': 'normal',
-        'init_gain': 0.02,
-        'gpu_ids': []
-    }
-}
-
-TrainingSet = './Sketchy/all'
-TestSet = './Sketchy/test'
-
-
-def isTrue(var_name):
-    if not hasattr(__name__,var_name):
-        return False
-    else:
-        return getattr(__name__,var_name)
+# Utility function. Checks if given property is set to True AND properties which are not defined are assumed false.
+def isTrue(self, attrname):
+    return hasattr(self,attrname) and getattr(self,attrname)
+Params.isTrue = MethodType(isTrue, Params)

@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 
 from PIL import Image
 
-import Params
+from Params import Params
 from vgg19 import VGG19
 from WarpGenerator import WarpGenerator
 from Correlation import correlation_map

@@ -5,7 +5,7 @@ import numpy as np
 import os
 import random
 
-import Params
+from Params import Params
 
 
 class Visualizer:

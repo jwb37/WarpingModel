@@ -6,7 +6,7 @@ import numpy as np
 
 import random
 
-import Params
+from Params import Params
 from ..init_net import init_net
 
 

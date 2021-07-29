@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
 
-import Params
+from Params import Params
 
 
 DataPoint = namedtuple('DataPoint', ('sketch', 'photo', 'category'))

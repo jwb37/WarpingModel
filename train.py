@@ -1,4 +1,4 @@
-import Params
+from Params import Params
 from Visualizer import Visualizer
 from ImageWarpNet import ImageWarpNet
 from SketchyDataset import SketchyDataset

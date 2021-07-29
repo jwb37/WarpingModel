@@ -7,8 +7,9 @@ import torch.nn.functional as F
 from Correlation import correlation_map
 
 class WST_Loss(nn.Module):
-    def __init__(self):
+    def __init__(self, visualizer=None):
         super().__init__()
+        self.visualizer = visualizer
 
 
     def forward(self, featsA, warpedA, tensorB, warp_grid, patch_size=9):
