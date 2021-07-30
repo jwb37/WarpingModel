@@ -36,8 +36,8 @@ class ImageWarpNet:
 
         self.img_transform = transforms.Compose([
             transforms.Resize( (256, 256) ),
-            transforms.ToTensor(),
-            transforms.Normalize( (123.680,116.779,103.939), (1., 1., 1.) )
+            transforms.Normalize( (123.680,116.779,103.939), (1., 1., 1.) ),
+            transforms.ToTensor()
         ])
 
     #------------------------------------------------------------------------
@@ -129,19 +129,32 @@ class ImageWarpNet:
         self.optimizer.zero_grad()
 
         flow, featsA, featsB = self.calc_flow(tensorA, tensorB, return_feats=True)
-        warpedA = self.warpTensor(featsA, flow)
 
-        loss = self.calc_loss(featsA, warpedA, featsB, flow)
-        loss.backward()
+        flow_interp = F.interpolate(flow, size=(256,256), mode='bilinear', align_corners=False)
+
+        warpedA = self.warpTensor(tensorA, flow_interp)
+        warpedfeatsA = self.vggA( warpedA, ['pool4'] )['pool4']
+        warpedfeatsA = F.normalize(warpedfeatsA)
+
+        losses = {
+            'patch':    self.calc_loss(featsA, warpedfeatsA, featsB, flow),
+            'flow_reg': torch.mean(torch.maximum( torch.abs(flow) - 1, torch.zeros_like(flow) ))
+        }
+        losses['final'] = losses['patch'] + losses['flow_reg']
+        losses['final'].backward()
         self.optimizer.step()
 
         if self.visualizer:
+            self.visualizer.add_tensor( 'tensorA', tensorA )
+            self.visualizer.add_tensor( 'tensorB', tensorB )
             self.visualizer.add_tensor( 'featsA', featsA )
             self.visualizer.add_tensor( 'warpedA', warpedA )
+            self.visualizer.add_tensor( 'warpedfeatsA', warpedfeatsA )
             self.visualizer.add_tensor( 'featsB', featsB )
             self.visualizer.add_tensor( 'flow', flow )
+            self.visualizer.add_tensor( 'flow_interp', flow_interp )
 
-        return loss.item()
+        return losses['final'].item()
         
     #-----------------------------------------------------
     #  Save and load the model/optimizer parameters

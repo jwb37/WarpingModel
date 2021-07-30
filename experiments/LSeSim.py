@@ -7,13 +7,13 @@ ModelName = 'LSeSim'
 Device = 'cuda'
 
 CropSize = 256
-BatchSize = 16
+BatchSize = 8
 NumEpochs = 40
 NumWarpIterations = 0
 #ContinueTrain = True
 
 LossLogFreq = 1000
-VisualizerFreq = 5000
+VisualizerFreq = 1000
 VisualizerNumExemplars = 1
 
 # Learning Rate
@@ -28,7 +28,7 @@ loss = {
     'patch_size': 9,
     'use_attn': True,
     'use_norm': True,
-    'ssim_compare_fn': 'cos',
+    'ssim_compare_fn': 'l1',
     'T': 0.1,
     'attn_init_info': {
         'init_type': 'normal',

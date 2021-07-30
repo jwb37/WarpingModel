@@ -1,6 +1,7 @@
 from PIL import Image
 import torch
 import numpy as np
+import torchvision.transforms as T
 
 import os
 import random
@@ -14,6 +15,7 @@ class Visualizer:
         self.next_save_iter = Params.VisualizerFreq
         self.save_this_iter = False
         self.save_path = os.path.join( Params.CheckpointDir, Params.ModelName, 'Images' )
+        self.tens_to_img = T.ToPILImage()
         os.makedirs( self.save_path, exist_ok=True )
 
 
@@ -34,21 +36,16 @@ class Visualizer:
             return
 
         batch_size, C, H, W = tensor.size()
-        if C == 3:
-            img_format = 'RGB'
-        else:
-            img_format = 'L'
+        if C != 3:
+            # Reduce non-rgb tensors to greyscale by taking mean activation value
+            tensor = tensor.mean( dim=1, keepdim=True )
 
         imgs = []
 
         for n in self.batch_indices:
-            img_np = tensor[n].detach().cpu().numpy()
-            img_np = img_np.transpose( (2,1,0) )   # CxHxW -> WxHxC
-            if C != 3:
-                img_np = np.mean(img_np, -1, keepdims=False)     # Reduce non-rgb tensors to greyscale by taking mean activation value
-                img_np = normalize_image(img_np)
-
-            img = Image.fromarray(img_np, mode=img_format)
+            img_np = tensor[n].detach().cpu()
+#            img_np = normalize_image(img_np)
+            img = self.tens_to_img(img_np)
             imgs.append(img)
 
         self.img_batch[name] = imgs
