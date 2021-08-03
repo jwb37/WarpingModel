@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Correlation import correlation_map
+from models.Translation.Correlation import correlation_map
+
+from Params import Params
+
 
 class WST_Loss(nn.Module):
     def __init__(self, visualizer=None):
@@ -12,28 +15,17 @@ class WST_Loss(nn.Module):
         self.visualizer = visualizer
 
 
-    def forward(self, featsA, warpedA, tensorB, warp_grid, patch_size=9):
-        corr = correlation_map(warpedA, tensorB, flatten=False)
+    def forward(self, featsA, warpedfeatsA, featsB, warp_grid, patch_size=9):
+        corr = correlation_map(warpedfeatsA, featsB, flatten=True)
 
-        half_patch_size = (patch_size-1) // 2
+        # N x P_B x P_A where P_A, P_B are the number of pixels in 
+        flat_corr = corr.flatten(start_dim=2)
+        N, P_B, P_A = flat_corr.size()
+        # We wish each pixel in warped A to be most like the matching pixel B out of all the pixels in B
+        target = torch.arange(P_B, dtype=torch.long).to(Params.Device)
+        target = target.view(1, P_A)
+        target = target.repeat(N, 1)
 
-        N, H, W, _, _ = corr.size()
-        window = torch.zeros( (H, W), dtype=torch.bool )
-        window[:patch_size, :patch_size] = 1
-
-        loss = 0
-        patches = torch.zeros(N, patch_size**2)
-
-        iter_range = itertools.product(
-            range(half_patch_size, H - half_patch_size),
-            range(half_patch_size, W - half_patch_size)
-        )
-
-        for i, j in iter_range:
-            shifted_window = torch.roll(window, shifts=(i-half_patch_size, j-half_patch_size), dims=(0,1))
-            arr = corr[:, i, j, :, :]
-            for b in range(N):
-                patch = arr[b][shifted_window].flatten()
-                loss = loss - F.log_softmax(patch, dim=0).sum()
+        loss = F.cross_entropy(flat_corr, target)
 
         return loss

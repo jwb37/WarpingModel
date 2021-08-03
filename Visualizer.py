@@ -14,9 +14,13 @@ class Visualizer:
         self.img_batch = dict()
         self.next_save_iter = Params.VisualizerFreq
         self.save_this_iter = False
-        self.save_path = os.path.join( Params.CheckpointDir, Params.ModelName, 'Images' )
+        self.save_path = os.path.join( Params.CheckpointDir, Params.ExperimentName, 'Images' )
         self.tens_to_img = T.ToPILImage()
         os.makedirs( self.save_path, exist_ok=True )
+
+
+    def set_start_iter(self, total_iters):
+        self.next_save_iter = total_iters + Params.VisualizerFreq
 
 
     def set_iter(self, epoch, total_iters):

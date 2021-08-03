@@ -1,6 +1,6 @@
+from models import get_model
 from Params import Params
 from Visualizer import Visualizer
-from ImageWarpNet import ImageWarpNet
 from SketchyDataset import SketchyDataset
 
 import time
@@ -35,10 +35,10 @@ class Trainer:
         )
 
     def prepare_logs(self):
-        os.makedirs( path.join(Params.CheckpointDir, Params.ModelName), exist_ok=True )
+        os.makedirs( path.join(Params.CheckpointDir, Params.ExperimentName), exist_ok=True )
 
         self.logs = {
-            'train': path.join( Params.CheckpointDir, Params.ModelName, 'training.log' ),
+            'train': path.join( Params.CheckpointDir, Params.ExperimentName, 'training.log' ),
         }
 
         # Do not clear log files if we are continuing training a previous model
@@ -52,7 +52,7 @@ class Trainer:
     def prepare_continued_training(self):
         # Find latest model trained so far
 
-        model_path = path.join( Params.CheckpointDir, Params.ModelName )
+        model_path = path.join( Params.CheckpointDir, Params.ExperimentName )
         # Thought about using a regular expression, but just a splice and startswith/endswith should suffice (it's not like we're expecting malformed filenames)
         saved_models = [ (int(filename[6:-3]),filename) for filename in os.listdir(model_path) if filename.endswith('.pt') and filename.startswith('epoch_') ]
         saved_models.sort(key = lambda t: t[0], reverse=True)
@@ -68,7 +68,7 @@ class Trainer:
 
 
     def create_model(self):
-        self.model = ImageWarpNet(visualizer=self.visualizer)
+        self.model = get_model(visualizer=self.visualizer)
         self.model.prepare_training()
 
         if Params.UseScheduler:
@@ -107,6 +107,7 @@ class Trainer:
 
         # Initializes to zero, unless we're continuing training
         self.total_iter = self.start_epoch * len(self.training_set)
+        self.visualizer.set_start_iter(self.total_iter)
         self.next_losslog_iter = self.total_iter + Params.LossLogFreq
 
 #        torch.autograd.set_detect_anomaly(True)
@@ -123,7 +124,7 @@ class Trainer:
 
             # Save checkpoint
             if ((epoch+1) % Params.CheckpointFreq) == 0:
-                filename = path.join(Params.CheckpointDir, Params.ModelName, f"epoch_{epoch+1}.pt")
+                filename = path.join(Params.CheckpointDir, Params.ExperimentName, f"epoch_{epoch+1}.pt")
                 print( f"Saving checkpoint to {filename}" )
                 self.model.save(filename)
 
@@ -131,7 +132,7 @@ class Trainer:
             print( f"Epoch took {toc:.1f} seconds. Estimated remaining time {toc*(Params.NumEpochs - epoch - 1)/60:.1f} minutes" )
 
         # Save final model
-        filename = path.join(Params.CheckpointDir, Params.ModelName, f"final.pt")
+        filename = path.join(Params.CheckpointDir, Params.ExperimentName, f"final.pt")
         self.model.save(filename)
 
 

@@ -3,12 +3,13 @@ import torch
 CheckpointDir = './checkpoints'
 CheckpointFreq = 1
 
-ModelName = 'LSeSim'
+ExperimentName = 'LSeSim'
+ModelName = 'Translation'
 Device = 'cuda'
 
 CropSize = 256
-BatchSize = 8
-NumEpochs = 40
+BatchSize = 16
+NumEpochs = 20
 NumWarpIterations = 0
 #ContinueTrain = True
 
