@@ -1,0 +1,10 @@
+PyTorch implementation of Recurrent Transformer Networks as described and implemented in Matlab at https://seungryong.github.io/RTNs/
+
+Download the sketchy dataset from http://sketchy.eye.gatech.edu/
+In this folder:
+    Make a subdir named 'Sketchy'
+    Copy all folders/files in '256x256/sketch/tx_000000000000' from the Sketchy dataset into 'Sketchy/all/sketch'
+    Copy all folders/files in '256x256/photo/tx_000000000000' from the Sketchy dataset into 'Sketchy/all/photo'
+
+To train an RTN model, open a terminal and run 'python train.py RTN'
+(RTN refers to a configuration file found under 'experiments')
