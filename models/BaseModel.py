@@ -32,7 +32,7 @@ class BaseModel:
         self.img_transform = transforms.Compose([
             transforms.Resize( (256, 256) ),
             transforms.ToTensor(),
-            transforms.Normalize( (0.485, 0.456, 0.406), (0.229, 0.224, 0.225) )
+            transforms.Normalize( (0.5, 0.5, 0.5), (0.5, 0.5, 0.5) )
         ])
 
     #------------------------------------------------------------------------
@@ -44,7 +44,6 @@ class BaseModel:
         tensB = self.img_transform(imgB).unsqueeze(0).to(Params.Device)
 
         flow = self.calc_flow(tensA, tensB)
-        flow = flow.movedim(1, -1)
 
         return self.warpImage(imgA, flow)
 
@@ -64,9 +63,14 @@ class BaseModel:
         ])
 
         flow = F.interpolate(flow, size=(256,256), mode='bilinear')
+        B, _, H, W = flow.size()
+        base_x = torch.linspace(-1,1,W).reshape(1, 1, W, 1).repeat(B,H,1,1)
+        base_y = torch.linspace(-1,1,H).reshape(1, H, 1, 1).repeat(B,1,W,1)
+        base_grid = torch.cat( (base_x, base_y), dim=-1 ).to(Params.Device)
+        warp_grid = base_grid + flow.movedim(1,-1)
 
         tens = img_transform(img).unsqueeze(0).to(Params.Device)
-        tens = F.grid_sample(tens, flow, align_corners=False)
+        tens = F.grid_sample(tens, warp_grid, align_corners=False)
 
         tens = tens[0,:,:,:]
         # PIL likes to have dimensions in order H x W x C
@@ -88,6 +92,9 @@ class BaseModel:
         if hasattr(self, 'calc_loss'):
             self.calc_loss.train()
 
+    def prepare_testing(self):
+        self.wg.eval()
+
     def training_step(self, tensorA, tensorB):
         pass
 
@@ -104,7 +111,9 @@ class BaseModel:
     def load(self, filename):
         save_state = torch.load( filename )
         self.wg.load_state_dict( save_state['model'] )
-        self.optimizer.load_state_dict( save_state['optim'] )
+
+        if hasattr(self, 'optimizer'):
+            self.optimizer.load_state_dict( save_state['optim'] )
 
         if hasattr(self, 'calc_loss'):
             self.calc_loss.load_state_dict( save_state['lossF'] )
