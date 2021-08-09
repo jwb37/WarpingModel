@@ -85,10 +85,11 @@ class Trainer:
             self.total_iter += imageA.size(0)
             self.visualizer.set_iter(epoch, self.total_iter)
 
-            loss = self.model.training_step(imageA, imageB)
+            losses = self.model.training_step(imageA, imageB)
 
+            loss_string = ' '.join( [f"L_{name} {value.item():.3f}" for name, value in losses.items()] )
             train_log_buffer.append(
-                f"Epoch {epoch+1} Iter {iter} TotalIter {self.total_iter} Loss {loss:.3f}\n"
+                f"Epoch {epoch+1} Iter {iter} TotalIter {self.total_iter} {loss_string}\n"
             )
 
             if self.total_iter > self.next_losslog_iter:
