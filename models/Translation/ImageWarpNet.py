@@ -101,4 +101,4 @@ class ImageWarpNet(BaseModel):
 #            self.visualizer.add_tensor( 'flow_interp', flow_interp )
 
 #        return losses['final'].item()
-        return loss.item()
+        return { 'total': loss }

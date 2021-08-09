@@ -18,6 +18,8 @@ from .WarpGenerator import WarpGenerator
 from .Transformer_Layer import Transformer_Layer
 from .Constraint_Correlation_Layer import Constraint_Correlation_Layer
 
+from losses.RTN import RTN_Loss
+from losses.Smoothness import SmoothnessLoss
 
 
 class ImageWarpNet(BaseModel):
@@ -31,7 +33,8 @@ class ImageWarpNet(BaseModel):
         self.deconv_block = DeconvBlock()
         self.deconv_block.to(Params.Device)
 
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.RTN_loss = RTN_Loss()
+        self.smoothness_loss = SmoothnessLoss()
 
 
     def transform_to_flow(self, x):
@@ -98,12 +101,15 @@ class ImageWarpNet(BaseModel):
 
         flow, corr_vol = self.calc_flow(tensorA, tensorB, True)
 
-        N, C, H, W = corr_vol.size()
-        target = torch.ones( (N, H, W), dtype=torch.long ) * ((C - 1)//2)
-        target = target.to(Params.Device)
+        losses = {
+            'corr': self.RTN_loss(corr_vol)
+        }
 
-        loss = self.loss_fn(corr_vol, target)
-        loss.backward()
+        if Params.isTrue('UseSmoothLoss'):
+            losses['smooth'] = self.smoothness_loss(flow) * Params.SmoothLossLambda
+
+        losses['total'] = sum(losses.values())
+        losses['total'].backward()
         self.optimizer.step()
 
         if self.visualizer.save_this_iter:
@@ -114,4 +120,4 @@ class ImageWarpNet(BaseModel):
             self.visualizer.add_tensor('imgB', tensorB)
             self.visualizer.add_tensor('flow', flow)
 
-        return loss.item()
+        return losses
