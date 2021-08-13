@@ -62,6 +62,9 @@ class BaseModel:
             transforms.ToTensor()
         ])
 
+        if Params.isTrue('BlurFlow'):
+            flow = transforms.functional.gaussian_blur(flow, kernel_size=7)
+
         flow = F.interpolate(flow, size=(256,256), mode='bilinear')
         B, _, H, W = flow.size()
         base_x = torch.linspace(-1,1,W).reshape(1, 1, W, 1).repeat(B,H,1,1)
