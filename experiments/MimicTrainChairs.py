@@ -1,16 +1,17 @@
 import torch
 
 CheckpointDir = './checkpoints'
-CheckpointFreq = 1
+CheckpointFreq = 20
 
-ExperimentName = 'RTN'
-ModelName = 'Affine'
-Dataset = 'Sketchy'
+ExperimentName = 'MimicChairs'
+ModelName = 'Mimic'
+Dataset = 'Chairs'
+B_suffix = 'Flow'
 Device = 'cuda'
 
 CropSize = 256
 BatchSize = 16
-NumEpochs = 20
+NumEpochs = 300
 NumWarpIterations = 3
 ContinueTrain = True
 
@@ -22,8 +23,3 @@ VisualizerNumExemplars = 1
 create_optimizer = lambda params: torch.optim.Adam(params, lr=1e-5, betas=(0.5, 0.999))
 UseScheduler = False
 create_scheduler = lambda optimizer: torch.optim.lr_scheduler.StepLR(optimizer, NumEpochs // 3, gamma=0.1)
-
-
-TrainingSet = './Sketchy/all'
-TestSet = './Sketchy/test'
-
