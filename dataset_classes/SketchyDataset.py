@@ -10,18 +10,15 @@ import torchvision.transforms as transforms
 
 from Params import Params
 
-
 DataPoint = namedtuple('DataPoint', ('sketch', 'photo', 'category'))
 
 class SketchyDataset(Dataset):
-    def __init__(self, phase):
+    def __init__(self, phase, ret_tensor=True):
         self.all_data = []
 
-        split_paths = {
-            'train': Params.TrainingSet,
-            'test': Params.TestSet,
-        }
-        base_path = Path( split_paths[phase] )
+        self.ret_tensor = ret_tensor
+
+        base_path = Path( './datasets/Sketchy/', phase )
 
         sketch_subdirs = [entry for entry in (base_path/'sketch').iterdir() if entry.is_dir()]
         sketch_subdirs.sort(key=lambda e: e.name)
@@ -57,6 +54,9 @@ class SketchyDataset(Dataset):
         ans = { 'category': data_pt.category }
         for out_name, fname in zip( ('imageA', 'imageB'), (data_pt.sketch, data_pt.photo) ):
             img = Image.open( fname ).convert('RGB')
-            ans[out_name] = self.transform(img)
+            if self.ret_tensor:
+                ans[out_name] = self.transform(img)
+            else:
+                ans[out_name] = img
 
         return ans

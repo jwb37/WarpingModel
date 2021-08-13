@@ -1,7 +1,7 @@
 from models import get_model
 from Params import Params
 from Visualizer import Visualizer
-from SketchyDataset import SketchyDataset
+from dataset_classes import create_dataset
 
 import time
 import os
@@ -25,7 +25,7 @@ class Trainer:
 
 
     def load_dataset(self):
-        self.training_set = SketchyDataset('train')
+        self.training_set = create_dataset('train')
 
         self.train_dl = torch.utils.data.DataLoader(
             self.training_set,
@@ -62,7 +62,7 @@ class Trainer:
         self.model.load( path.join(model_path, saved_models[0][1]) )
 
         # Get Learning Rate scheduler up to appropriate point
-        if Params.UseScheduler:
+        if Params.isTrue('UseScheduler'):
             for k in range(self.start_epoch):
                 self.scheduler.step()
 
@@ -71,7 +71,7 @@ class Trainer:
         self.model = get_model(visualizer=self.visualizer)
         self.model.prepare_training()
 
-        if Params.UseScheduler:
+        if Params.isTrue('UseScheduler'):
             self.scheduler = Params.create_scheduler(self.model.optimizer)
 
     def inner_training_loop(self, epoch):
@@ -120,7 +120,7 @@ class Trainer:
 
             self.inner_training_loop(epoch)
 
-            if Params.UseScheduler:
+            if Params.isTrue('UseScheduler'):
                 self.scheduler.step()
 
             # Save checkpoint

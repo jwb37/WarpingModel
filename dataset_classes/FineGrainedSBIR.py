@@ -1,4 +1,5 @@
 import re
+import torch
 from collections import namedtuple
 from pathlib import Path
 
@@ -13,26 +14,25 @@ from Params import Params
 
 DataPoint = namedtuple('DataPoint', ('sketch', 'photo', 'fname'))
 
+ImageSuffices = ( '.png', '.jpg', '.jpeg', '.bmp', '.tiff' )
 
-class ShoesDataset(Dataset):
-    def __init__(self, phase):
+
+class FineGrainedSBIR_Dataset(Dataset):
+    def __init__(self, base_dir, phase, A_suffix='A', B_suffix='B', ret_tensor=True):
         self.all_data = []
 
-        base_dir = Path('./Shoes')
+        if hasattr(Params, 'B_suffix'):
+            B_suffix = Params.B_suffix
 
-        if phase == 'train':
-            sketch_dir = base_dir / 'trainA'
-            photo_dir = base_dir / 'trainB'
-        elif phase == 'test':
-            sketch_dir = base_dir / 'testA'
-            photo_dir = base_dir / 'testB'
+        sketch_dir = base_dir / (phase + A_suffix)
+        photo_dir = base_dir / (phase + B_suffix)
 
-        self.phase = phase
+        self.ret_tensor = ret_tensor
 
         self.all_data = [
             DataPoint(
-                sketch = str(sketch_path),
-                photo = str(photo_dir/sketch_path.name),
+                sketch = sketch_path,
+                photo = photo_dir/sketch_path.name if (photo_dir/sketch_path.name).exists() else photo_dir/(sketch_path.stem + '.pt'),
                 fname = sketch_path.name
             )
             for sketch_path in sketch_dir.iterdir()
@@ -53,10 +53,12 @@ class ShoesDataset(Dataset):
 
         ans = {'fname': data_pt.fname}
         for out_name, fname in zip( ('imageA', 'imageB'), (data_pt.sketch, data_pt.photo) ):
-            img = Image.open( fname ).convert('RGB')
-            if self.phase == 'test':
+            if fname.suffix == '.pt':
+                ans[out_name] = torch.load(fname).squeeze(dim=0)
+            elif fname.suffix in ImageSuffices:
+                img = Image.open( fname ).convert('RGB')
+                if self.ret_tensor:
+                    img = self.transform(img)
                 ans[out_name] = img
-            elif self.phase == 'train':
-                ans[out_name] = self.transform(img)
 
         return ans
