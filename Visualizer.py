@@ -47,6 +47,7 @@ class Visualizer:
         imgs = []
 
         for n in self.batch_indices:
+            n = n % batch_size
             img_np = tensor[n].detach().cpu()
 #            img_np = normalize_image(img_np)
             img = self.tens_to_img(img_np)
