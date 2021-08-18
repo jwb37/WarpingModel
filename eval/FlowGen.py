@@ -1,4 +1,5 @@
 import torch
+import torchvision.transforms.functional as F
 from tqdm import tqdm
 
 from Params import Params
@@ -31,4 +32,6 @@ class FlowGen(BaseEval):
                     photo = data['imageB'].unsqueeze(0).to(Params.Device)
 
                     flow = self.model.calc_flow(sketch, photo)
+                    if Params.isTrue('BlurFlow'):
+                        flow = F.gaussian_blur(flow, kernel_size=7)
                     torch.save( flow.cpu(), os.path.join(out_dir, data['fname'][:-3] + 'pt') )
