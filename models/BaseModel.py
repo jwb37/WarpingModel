@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,11 +22,12 @@ class BaseModel:
         for net in [self.vggA, self.vggB, self.wg]:
             net.to(Params.Device)
 
-        # VGG models are pre-trained and only used for extracting features.
-        for model in [self.vggA, self.vggB]:
-            for param in model.parameters():
-                param.requires_grad = False
-            model.eval()
+        if not Params.isTrue('TrainVGG'):
+            # VGG models are pre-trained and only used for extracting features.
+            for model in [self.vggA, self.vggB]:
+                for param in model.parameters():
+                    param.requires_grad = False
+                model.eval()
 
         self.num_iterations = Params.NumWarpIterations
 
@@ -90,7 +92,13 @@ class BaseModel:
     # Training functions
 
     def prepare_training(self):
-        self.optimizer = Params.create_optimizer(self.wg.parameters())
+        if Params.isTrue('TrainVGG'):
+            param_list = [net.parameters() for net in (self.wg, self.vggA, self.vggB)]
+            optim_params = itertools.chain(*param_list)
+        else:
+            optim_params = self.wg.parameters()
+
+        self.optimizer = Params.create_optimizer(optim_params)
         self.wg.train()
         if hasattr(self, 'calc_loss'):
             self.calc_loss.train()
@@ -109,6 +117,10 @@ class BaseModel:
         }
         if hasattr(self, 'calc_loss'):
             save_state['lossF'] = self.calc_loss.state_dict()
+        if Params.isTrue('TrainVGG'):
+            save_state['vggA'] = self.vggA.state_dict()
+            save_state['vggB'] = self.vggB.state_dict()
+
         torch.save( save_state, filename )
 
     def load(self, filename):
@@ -120,3 +132,9 @@ class BaseModel:
 
         if hasattr(self, 'calc_loss'):
             self.calc_loss.load_state_dict( save_state['lossF'] )
+
+        if 'vggA' in save_state:
+            self.vggA.load_state_dict( save_state['vggA'] )
+
+        if 'vggB' in save_state:
+            self.vggB.load_state_dict( save_state['vggB'] )
