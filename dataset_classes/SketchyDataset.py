@@ -32,8 +32,8 @@ class SketchyDataset(Dataset):
                 if m is not None:
                     self.all_data.append(
                         DataPoint(
-                            sketch = str(sketch_path),
-                            photo = str(photo_subdir/f"{m.group(1)}.jpg"),
+                            sketch = sketch_path,
+                            photo = photo_subdir/f"{m.group(1)}.jpg",
                             category = sketch_subdir.name
                         )
                     )
@@ -51,7 +51,7 @@ class SketchyDataset(Dataset):
     def __getitem__(self, idx):
         data_pt = self.all_data[idx]
 
-        ans = { 'category': data_pt.category }
+        ans = { 'category': data_pt.category, 'fname': data_pt.sketch.name }
         for out_name, fname in zip( ('imageA', 'imageB'), (data_pt.sketch, data_pt.photo) ):
             img = Image.open( fname ).convert('RGB')
             if self.ret_tensor:
