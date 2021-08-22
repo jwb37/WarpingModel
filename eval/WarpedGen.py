@@ -25,7 +25,7 @@ class WarpedGen(BaseEval):
         with torch.no_grad():
             self.model.prepare_testing()
             for setname in ('train', 'test'):
-                out_dir = os.path.join( self.model_path, Params.Dataset, setname + 'Warped' )
+                out_dir = os.path.join( self.model_path, Params.Dataset['name'], setname + 'Warped' )
                 os.makedirs( out_dir, exist_ok=True )
                 for data in tqdm(self.dataset[setname]):
                     sketch = data['imageA']

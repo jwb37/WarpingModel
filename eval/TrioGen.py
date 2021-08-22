@@ -30,7 +30,7 @@ class TrioGen(BaseEval):
         with torch.no_grad():
             self.model.prepare_testing()
             for setname in ('train', 'test'):
-                out_dir = path.join( self.model_path, Params.Dataset, f"{setname}Trio" )
+                out_dir = path.join( self.model_path, Params.Dataset['name'], f"{setname}Trio" )
                 os.makedirs( out_dir, exist_ok=True )
                 for data in tqdm(self.dataset[setname]):
                     sketch = data['imageA']

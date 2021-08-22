@@ -25,7 +25,7 @@ class FlowGen(BaseEval):
             self.model.prepare_testing()
             for setname in ('train','test'):
                 print(f"Generating flows for {setname} dataset...")
-                out_dir = os.path.join( self.model_path, Params.Dataset, setname + 'Flow' )
+                out_dir = os.path.join( self.model_path, Params.Dataset['name'], setname + 'Flow' )
                 os.makedirs( out_dir, exist_ok=True )
                 for data in tqdm(self.dataset[setname]):
                     sketch = data['imageA'].unsqueeze(0).to(Params.Device)

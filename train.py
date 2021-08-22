@@ -15,13 +15,12 @@ class Trainer:
     def __init__(self):
         self.visualizer = Visualizer()
 
+        self.model_dir = path.join(Params.CheckpointDir, Params.ExperimentName)
+        os.makedirs( self.model_dir, exist_ok=True )
+
         self.load_dataset()
         self.create_model()
-
-        if Params.isTrue('ContinueTrain'):
-            self.prepare_continued_training()
-        else:
-            self.start_epoch = 0
+        self.load_latest_model()
 
 
     def load_dataset(self):
@@ -35,31 +34,34 @@ class Trainer:
         )
 
     def prepare_logs(self):
-        os.makedirs( path.join(Params.CheckpointDir, Params.ExperimentName), exist_ok=True )
-
         self.logs = {
-            'train': path.join( Params.CheckpointDir, Params.ExperimentName, 'training.log' ),
+            'train': path.join( self.model_dir, 'training.log' ),
         }
 
-        # Do not clear log files if we are continuing training a previous model
-        if not Params.isTrue('ContinueTrain'):
+        # Clear log files, but only if we are training from scratch
+        if self.start_epoch == 0:
             for log_filename in self.logs.values():
                 print( f"Clearing log file {log_filename}" )
                 if path.exists(log_filename):
                     os.remove(log_filename)
 
 
-    def prepare_continued_training(self):
-        # Find latest model trained so far
-
-        model_path = path.join( Params.CheckpointDir, Params.ExperimentName )
+    def load_latest_model(self):
         # Thought about using a regular expression, but just a splice and startswith/endswith should suffice (it's not like we're expecting malformed filenames)
-        saved_models = [ (int(filename[6:-3]),filename) for filename in os.listdir(model_path) if filename.endswith('.pt') and filename.startswith('epoch_') ]
-        saved_models.sort(key = lambda t: t[0], reverse=True)
+        saved_models = [
+            (int(filename[6:-3]),filename)
+            for filename in os.listdir(self.model_dir)
+            if filename.endswith('.pt') and filename.startswith('epoch_')
+        ]
 
+        if not saved_models:
+            self.start_epoch = 0
+            return
+
+        saved_models.sort(key = lambda t: t[0], reverse=True)
         print( f"Loading model at epoch {saved_models[0][0]}. Filename is {saved_models[0][1]}" )
         self.start_epoch = saved_models[0][0]
-        self.model.load( path.join(model_path, saved_models[0][1]) )
+        self.model.load( path.join(self.model_dir, saved_models[0][1]) )
 
         # Get Learning Rate scheduler up to appropriate point
         if Params.isTrue('UseScheduler'):
@@ -125,7 +127,7 @@ class Trainer:
 
             # Save checkpoint
             if ((epoch+1) % Params.CheckpointFreq) == 0:
-                filename = path.join(Params.CheckpointDir, Params.ExperimentName, f"epoch_{epoch+1}.pt")
+                filename = path.join(self.model_dir, f"epoch_{epoch+1}.pt")
                 print( f"Saving checkpoint to {filename}" )
                 self.model.save(filename)
 
@@ -133,7 +135,7 @@ class Trainer:
             print( f"Epoch took {toc:.1f} seconds. Estimated remaining time {toc*(Params.NumEpochs - epoch - 1)/60:.1f} minutes" )
 
         # Save final model
-        filename = path.join(Params.CheckpointDir, Params.ExperimentName, f"final.pt")
+        filename = path.join(self.model_dir, f"final.pt")
         self.model.save(filename)
 
 

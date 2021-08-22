@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from .FineGrainedSBIR import FineGrainedSBIR_Dataset
 
+
 class ShoesDataset(FineGrainedSBIR_Dataset):
-    def __init__( *args, **kwargs ):
-        super().__init__('datasets/Shoes/', *args, **kwargs)
+    def __init__( self, *args, **kwargs ):
+        super().__init__(Path('datasets/ShoesV2/'), *args, **kwargs)
