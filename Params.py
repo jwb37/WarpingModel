@@ -16,3 +16,7 @@ Params.params_file_path = path.join('experiments', module_name)
 def isTrue(self, attrname):
     return hasattr(self,attrname) and getattr(self,attrname)
 Params.isTrue = MethodType(isTrue, Params)
+
+
+# Constants
+Params.CheckpointDir = './checkpoints'
