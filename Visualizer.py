@@ -40,8 +40,13 @@ class Visualizer:
             return
 
         batch_size, C, H, W = tensor.size()
-        if C != 3:
-            # Reduce non-rgb tensors to greyscale by taking mean activation value
+
+        if C == 2:
+            # Add a dummy blue channel (all ones) to visualize a 2D flow
+            dummy_c = torch.ones_like(tensor, dtype=torch.float).to(Params.Device)
+            tensor = torch.cat( (tensor, dummy_c), dim=1 )
+        elif C != 3:
+            # Reduce other non-rgb tensors to greyscale by taking mean activation value
             tensor = tensor.mean( dim=1, keepdim=True )
 
         imgs = []
@@ -49,6 +54,7 @@ class Visualizer:
         for n in self.batch_indices:
             n = n % batch_size
             img_np = tensor[n].detach().cpu()
+            img_np = (img_np + 1) / 2.0
 #            img_np = normalize_image(img_np)
             img = self.tens_to_img(img_np)
             imgs.append(img)
@@ -62,7 +68,7 @@ class Visualizer:
 
         for img_name, img_list in self.img_batch.items():
             for batch_idx, img in enumerate(img_list):
-                fname = f"epoch({self.epoch})_iter({self.iter})_{img_name}_{batch_idx}.png"
+                fname = f"epoch({self.epoch+1})_iter({self.iter})_{img_name}_{batch_idx}.png"
                 img.save( os.path.join(self.save_path, fname) )
 
 
