@@ -15,9 +15,6 @@ class SingleImageDataset(Dataset):
     def __init__(self, phase, ret_tensor=True):
         super().__init__()
 
-#        if phase != 'test':
-#            raise Exception("Error: Singe Image Dataset is only intended for testing, not for training")
-
         base_dir = Path('datasets', 'Single')
 
         self.transform = transforms.Compose( [
@@ -44,4 +41,6 @@ class SingleImageDataset(Dataset):
         return 1
 
     def __getitem__(self, idx):
+        if idx > 0:
+            raise IndexError
         return self.datapoint

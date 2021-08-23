@@ -7,7 +7,7 @@ ModelName = 'Mimic'
 Dataset = {
     'name': 'Shoes',
     # Use overwrite_dir to use results from another model in training this model
-    'overwrite_dir': 'checkpoints/RTN_Adv_Test/Shoes'
+    'overwrite_dir': 'checkpoints/RTN_Shoes/Shoes'
 }
 Device = 'cuda'
 

@@ -3,4 +3,4 @@
 # Except this file
 !.gitignore
 !fix_chairs_dataset.py
-!split_sketchy.py 
+!split_sketchy.py
