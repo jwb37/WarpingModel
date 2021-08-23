@@ -14,7 +14,7 @@ class Visualizer:
         self.img_batch = dict()
         self.next_save_iter = Params.VisualizerFreq
         self.save_this_iter = False
-        self.save_path = os.path.join( Params.CheckpointDir, Params.ExperimentName, 'Images' )
+        self.save_path = os.path.join( Params.CheckpointDir, Params.ExperimentName, 'TrainingImages' )
         self.tens_to_img = T.ToPILImage()
         os.makedirs( self.save_path, exist_ok=True )
 

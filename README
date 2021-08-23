@@ -1,10 +1,56 @@
-PyTorch implementation of Recurrent Transformer Networks as described and implemented in Matlab at https://seungryong.github.io/RTNs/
+This project began as a PyTorch implementation of Recurrent Transformer Networks as described and implemented in Matlab at https://seungryong.github.io/RTNs/
+It has since grown to encompass a few related models, including a standard Pix2pix image translation model.
 
-Download the sketchy dataset from http://sketchy.eye.gatech.edu/
-In this folder:
+
+Instructions
+------------
+Download the fine-grained SBIR datasets from this page http://sketchx.eecs.qmul.ac.uk/downloads/
+Place the folders 'ChairV2' and 'ShoesV2' into the 'datasets' folder
+In the 'datasets' folder, open a terminal and run the command 'python fix_chairs_dataset.py' to fix a couple of inconsistent file naming errors in the ChairV2 dataset
+
+To train an RTN warp generating model:
+    Open a terminal in the base directory and run 'python train.py RTN_Shoes'
+    (RTN_Shoes refers to a configuration file found under 'experiments')
+
+To then train a Mimic warp generating model:
+    First create the required flow outputs from the RTN model, by running 'python test.py RTN_Shoes FlowGen'
+    Then train the Mimic model based on these results, by running 'python train.py Mimic_Shoes'
+
+Finally, to train a Pix2Pix model based on the Mimic model's output:
+    First create the required warped image outputs from the Mimic model, by running 'python test.py Mimic_Shoes WarpedGen'
+    Then train the Pix2pix model by running 'python train.py Pix2Pix_Shoes'
+    This model will be trained on a channelwise concatenation of the original sketch and the warped sketch.
+    To train a Pix2pix model purely on the warped sketch, run 'python train.py Pix2Pix_Shoes_WarpsOnly'
+
+To train a Pix2pix baseline model, using the shoes dataset:
+    Run 'python train.py Pix2Pix_Shoes_Base'
+
+All results during both training and testing are to be found under the 'checkpoints' folder, as are the saved trained models (on conclusion of training, only 'final.pt' is required to be kept)
+
+Nice presentable results from the two warp generating models can be produced by running:
+    'python test.py RTN_Shoes TrioGen'
+and
+    'python test.py Mimic_Shoes TrioGen'
+
+
+Other datasets
+--------------
+
+- Sketchy
+Download the sketchy dataset from http://sketchy.eye.gatech.edu/ and extract it somewhere.
+In the 'datasets' folder:
     Make a subdir named 'Sketchy'
     Copy all folders/files in '256x256/sketch/tx_000000000000' from the Sketchy dataset into 'Sketchy/all/sketch'
     Copy all folders/files in '256x256/photo/tx_000000000000' from the Sketchy dataset into 'Sketchy/all/photo'
+    Run the command 'python split_sketchy.py' to split the dataset into a 95:5 train:test split (note - this requires a filesystem supporting symlinks)
+    In any configuration file, change the Dataset['name'] field to 'Sketchy' to use this dataset for training/testing
 
-To train an RTN model, open a terminal and run 'python train.py RTN'
-(RTN refers to a configuration file found under 'experiments')
+- SketchyCOCO
+Download the SketchyCOCO dataset from 
+
+- Single Image (for evaluation only)
+In the 'datasets' folder:
+    Make a subdir named 'Single'
+    Name the image you wish to be warped 'A.png' and place it in the 'Single' directory
+    Name the desired target for the warp 'B.png' and place it in the 'Single' directory
+    Run the command 'python test.py RTN_SingleImage TrioGen'
