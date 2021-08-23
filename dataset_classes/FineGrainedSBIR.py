@@ -18,17 +18,25 @@ ImageSuffices = ( '.png', '.jpg', '.jpeg', '.bmp', '.tiff' )
 
 
 class FineGrainedSBIR_Dataset(Dataset):
-    def __init__(self, base_dir, phase, A_suffixes=['A'], B_suffix='B', ret_tensor=True):
+    def __init__(self, base_dir, phase, ret_tensor=True):
         self.all_data = []
 
         if 'A_suffixes' in Params.Dataset:
-            A_suffixes = Params.Dataset['A_suffixes']
-        if 'B_suffix' in Params.Dataset:
-            B_suffix = Params.Dataset['B_suffix']
+            self.A_suffixes = Params.Dataset['A_suffixes']
+        else:
+            self.A_suffixes = ['A']
 
-        self.A_suffixes = A_suffixes
-        self.B_suffix = B_suffix
-        self.all_suffixes = A_suffixes + [B_suffix]
+        if 'B_suffix' in Params.Dataset:
+            self.B_suffix = Params.Dataset['B_suffix']
+        # Main time we need to override suffix is if training a Mimic network
+        # Hardcode that case here so that we don't have to specify it in every experiment params file
+        # (Note can always be overridden by a B_suffix setting in the params file)
+        elif Params.ModelName == 'Mimic' and phase == 'train':
+            self.B_suffix = 'Flow'
+        else:
+            self.B_suffix = 'B'
+
+        self.all_suffixes = self.A_suffixes + [self.B_suffix]
 
         dirs = dict()
         for suffix in self.all_suffixes:

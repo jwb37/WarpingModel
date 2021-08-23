@@ -90,8 +90,8 @@ class Pix2PixModel(BaseModel):
         for param in self.netD.parameters():    # D requires no gradients when optimizing G
             param.requires_grad = False
         self.optimizer_G.zero_grad()            # set G's gradients to zero
-        self.backward_G(realA, realB, fakeB)    # calculate graidents for G
-        self.optimizer_G.step()                 # udpate G's weights
+        self.backward_G(realA, realB, fakeB)    # calculate gradients for G
+        self.optimizer_G.step()                 # update G's weights
 
         if self.visualizer.save_this_iter:
             self.visualizer.add_tensor('realA', realA)
