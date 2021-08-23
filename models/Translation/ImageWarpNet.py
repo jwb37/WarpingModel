@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 
 from PIL import Image
 
-from ..BaseModel import BaseModel
+from ..BaseWarpModel import BaseWarpModel
 from ..vgg19 import VGG19
 
 from Params import Params
@@ -15,12 +15,13 @@ from .WarpGenerator import WarpGenerator
 from .Correlation import correlation_map
 
 
-class ImageWarpNet(BaseModel):
+class ImageWarpNet(BaseWarpModel):
     def __init__(self, visualizer=None):
         super().__init__(VGG19, WarpGenerator, visualizer)
 
         self.calc_loss = get_loss_module()
         self.calc_loss.visualizer = visualizer
+        self.trained_nets['calc_loss'] = self.calc_loss
 
     #-------------------------------------------------------------------------
     # Internals

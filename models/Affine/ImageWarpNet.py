@@ -9,7 +9,7 @@ from PIL import Image
 from Params import Params
 
 from ..vgg19 import VGG19
-from ..BaseModel import BaseModel
+from ..BaseWarpModel import BaseWarpModel
 
 from .DeconvBlock import DeconvBlock
 from .Flow_Layer import Flow_Layer
@@ -22,7 +22,7 @@ from losses.RTN import RTN_Loss
 from losses.Smoothness import SmoothnessLoss
 
 
-class ImageWarpNet(BaseModel):
+class ImageWarpNet(BaseWarpModel):
     def __init__(self, visualizer=None):
         super().__init__(VGG19, WarpGenerator, visualizer)
 
@@ -35,6 +35,8 @@ class ImageWarpNet(BaseModel):
 
         self.RTN_loss = RTN_Loss()
         self.smoothness_loss = SmoothnessLoss()
+
+        self.num_iterations = Params.NumWarpIterations
 
 
     def transform_to_flow(self, x):

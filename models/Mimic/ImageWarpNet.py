@@ -6,14 +6,14 @@ import torchvision.transforms as transforms
 
 from PIL import Image
 
-from ..BaseModel import BaseModel
+from ..BaseWarpModel import BaseWarpModel
 
 from Params import Params
 from losses import get_loss_module
 from .WarpGenerator import WarpGenerator
 
 
-class ImageWarpNet(BaseModel):
+class ImageWarpNet(BaseWarpModel):
     def __init__(self, visualizer=None):
         super().__init__(nn.Identity, WarpGenerator, visualizer)
 
