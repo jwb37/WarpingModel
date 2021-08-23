@@ -18,27 +18,33 @@ ImageSuffices = ( '.png', '.jpg', '.jpeg', '.bmp', '.tiff' )
 
 
 class FineGrainedSBIR_Dataset(Dataset):
-    def __init__(self, base_dir, phase, A_suffix='A', B_suffix='B', ret_tensor=True):
+    def __init__(self, base_dir, phase, A_suffixes=['A'], B_suffix='B', ret_tensor=True):
         self.all_data = []
 
+        if 'A_suffixes' in Params.Dataset:
+            A_suffixes = Params.Dataset['A_suffixes']
         if 'B_suffix' in Params.Dataset:
             B_suffix = Params.Dataset['B_suffix']
 
+        self.A_suffixes = A_suffixes
+        self.B_suffix = B_suffix
+        self.all_suffixes = A_suffixes + [B_suffix]
+
         dirs = dict()
-        for key, suffix in zip(('sketch','photo'), (A_suffix, B_suffix)):
-            dirs[key] = base_dir / (phase + suffix)
+        for suffix in self.all_suffixes:
+            dirs[suffix] = base_dir / (phase + suffix)
             if 'overwrite_dir' in Params.Dataset:
                 overwrite_dir = Path(Params.Dataset['overwrite_dir']) / (phase + suffix)
                 if overwrite_dir.exists():
-                    dirs[key] = overwrite_dir
+                    dirs[suffix] = overwrite_dir
 
         self.ret_tensor = ret_tensor
 
         self.re_strip_end = re.compile( r"(.*)_\d+(\.(?:png|jpg|jpeg))$" )
 
         self.all_data = [
-            self.gen_data_point(dirs['photo'], sketch_path)
-            for sketch_path in dirs['sketch'].iterdir()
+            self.gen_data_point(dirs, sketch_path)
+            for sketch_path in dirs[self.A_suffixes[0]].iterdir()
         ]
 
         self.transform = transforms.Compose( [
@@ -47,6 +53,21 @@ class FineGrainedSBIR_Dataset(Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ] )
+        self.transform_greyscale = transforms.Compose( [
+            transforms.Grayscale(1),
+            transforms.Resize(Params.CropSize),
+            transforms.RandomCrop( (Params.CropSize, Params.CropSize) ),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ] )
+
+        if not ret_tensor:
+            self.A_transform = self.B_transform = torch.nn.Identity
+        else:
+            self.A_transform = self.transform
+            if hasattr(Params, 'InputNC') and Params.InputNC==len(self.A_suffixes):
+                self.A_transform = self.transform_greyscale
+            self.B_transform = self.transform
 
 
     def __len__(self):
@@ -56,15 +77,23 @@ class FineGrainedSBIR_Dataset(Dataset):
     def __getitem__(self, idx):
         data_pt = self.all_data[idx]
 
-        ans = {'fname': data_pt.fname}
-        for out_name, fname in zip( ('imageA', 'imageB'), (data_pt.sketch, data_pt.photo) ):
+        raw_data = dict()
+        for suffix in self.all_suffixes:
+            fname = data_pt[suffix]
             if fname.suffix == '.pt':
-                ans[out_name] = torch.load(fname).squeeze(dim=0)
+                raw_data[suffix] = torch.load(fname).squeeze(dim=0)
             elif fname.suffix in ImageSuffices:
                 img = Image.open( fname ).convert('RGB')
-                if self.ret_tensor:
-                    img = self.transform(img)
-                ans[out_name] = img
+                raw_data[suffix] = img
+
+        ans = dict()
+        if len(self.A_suffixes) > 1:
+            ans['imageA'] = torch.cat( [self.A_transform(raw_data[suffix]) for suffix in self.A_suffixes], dim=0 )
+        else:
+            ans['imageA'] = self.A_transform(raw_data[self.A_suffixes[0]])
+
+        ans['imageB'] = self.B_transform(raw_data[self.B_suffix])
+        ans['fname'] = data_pt['fname']
 
         return ans
 
@@ -76,11 +105,29 @@ class FineGrainedSBIR_Dataset(Dataset):
         return ''.join(m.group(1,2))
 
 
-    def gen_data_point(self, photo_dir, sketch_path):
-        photo_path = photo_dir / self.strip_file_end(sketch_path.name)
+    def gen_data_point(self, dirs, A_path):
+        ''' This function exists to generate all other required paths to match a given 'A' path.
+            This dataset class supports multiple A folders, so we first find the matching file in each of those.
+
+            Also, for the B image, we need to find the correct filename in the 'B' folder:
+            The structure of this dataset has multiple 'A' images for each 'B' image
+            So that in the 'A' folder, files '001-1.png', '001-2.png' etc. match up
+            with the single file '001.png' in the 'B' folder. We use a regular expression
+            in the function 'strip_file_end' to achieve this.
+        '''
+        data_pt = { 'fname': A_path.name }
+        data_pt.update({
+            suffix: dirs[suffix] / A_path.name
+            for suffix in self.A_suffixes
+        })
+
+        B_dir = dirs[self.B_suffix]
+        B_path = B_dir / self.strip_file_end(A_path.name)
 
         # No such image file found... look for a saved '.pt' tensor instead
-        if not photo_path.exists():
-            photo_path = photo_dir / (sketch_path.stem + '.pt')
+        if not B_path.exists():
+            B_path = B_dir / (A_path.stem + '.pt')
 
-        return DataPoint( sketch_path, photo_path, sketch_path.name )
+        data_pt[self.B_suffix] = B_path
+
+        return data_pt
