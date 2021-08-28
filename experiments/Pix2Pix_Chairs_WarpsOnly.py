@@ -1,17 +1,17 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 50
+ExperimentName = 'Pix2Pix (Mimic Chairs, WarpsOnly)'
 
-ExperimentName = 'Pix2Pix (Mimic Chairs)'
 ModelName = 'Pix2Pix'
-InputNC = 2
+InputNC = 1
 OutputNC = 3
 
 Dataset = {
     'name': 'Chairs',
     # Use overwrite_dir to use results from another model in training this model
     'overwrite_dir': 'checkpoints/Mimic (RTN Chairs)/Chairs',
-    'A_suffixes': ['A','Warped']
+    'A_suffixes': ['Warped']
 }
 Device = 'cuda'
 

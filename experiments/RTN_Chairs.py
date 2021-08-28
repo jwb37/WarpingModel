@@ -2,16 +2,16 @@ import torch
 
 CheckpointFreq = 5
 
-ExperimentName = 'RTN_Shoes'
+ExperimentName = 'RTN_Chairs'
 ModelName = 'Affine'
 Dataset = {
-    'name': 'Shoes'
+    'name': 'Chairs'
 }
 Device = 'cuda'
 
 CropSize = 256
 BatchSize = 16
-NumEpochs = 15
+NumEpochs = 20
 NumWarpIterations = 4
 TrainVGG = True
 

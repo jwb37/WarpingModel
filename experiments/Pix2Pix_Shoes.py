@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 30
 
 ExperimentName = 'Pix2Pix (Mimic Shoes)'
 ModelName = 'Pix2Pix'
@@ -17,7 +17,7 @@ Device = 'cuda'
 
 CropSize = 256
 BatchSize = 1
-NumEpochs = 130
+NumEpochs = 150
 
 LossLogFreq = 1000
 VisualizerFreq = 1500
