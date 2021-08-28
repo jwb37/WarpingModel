@@ -48,8 +48,6 @@ class BaseWarpModel(BaseModel):
         self.optimizer = Params.create_optimizer(optim_params)
         self.optimizers['optim'] = self.optimizer
 
-        self.num_iterations = Params.NumWarpIterations
-
         self.img_transform = transforms.Compose([
             transforms.Resize( (256, 256) ),
             transforms.ToTensor(),

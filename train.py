@@ -18,7 +18,6 @@ class Trainer:
         self.model_dir = path.join(Params.CheckpointDir, Params.ExperimentName)
         os.makedirs( self.model_dir, exist_ok=True )
 
-        self.load_dataset()
         self.create_model()
         self.load_latest_model()
 
@@ -106,7 +105,10 @@ class Trainer:
 
 
     def train(self):
+        Params.isTrain = True
+
         self.prepare_logs()
+        self.load_dataset()
 
         # Initializes to zero, unless we're continuing training
         self.total_iter = self.start_epoch * len(self.training_set)

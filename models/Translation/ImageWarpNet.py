@@ -23,6 +23,8 @@ class ImageWarpNet(BaseWarpModel):
         self.calc_loss.visualizer = visualizer
         self.trained_nets['calc_loss'] = self.calc_loss
 
+        self.num_iterations = Params.NumWarpIterations
+
     #-------------------------------------------------------------------------
     # Internals
 
@@ -58,7 +60,7 @@ class ImageWarpNet(BaseWarpModel):
             flow = flow + self.feats_to_flow(featsA, featsB)
 
         if return_feats:
-            return flow, *original_feats
+            return flow, original_feats[0], original_feats[1]
         else:
             return flow
 

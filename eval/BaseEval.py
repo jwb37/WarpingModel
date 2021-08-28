@@ -15,7 +15,6 @@ class BaseEval:
     def __init__(self):
         self.model_path = path.join( Params.CheckpointDir, Params.ExperimentName )
 
-        self.load_dataset()
         self.create_model()
         self.load_latest_checkpoint()
 
@@ -36,6 +35,11 @@ class BaseEval:
         print( f"Loading model {latest_file}" )
         self.model.load( path.join(self.model_path, latest_file) )
 
+
+    def eval(self):
+        Params.isTrain = False
+        self.load_dataset()        
+        self.run_test()
 
     # ----------------------------------------------
     # Abstract methods

@@ -17,6 +17,6 @@ class Pix2PixFlowModel(Pix2PixModel):
 
         return F.grid_sample(tens, warp_grid, align_corners=False)
 
-    def forward(self):
-        super().forward()
-        self.warpedA = self.warpTensor(self.real_A, self.fake_B)
+    def __call__(self, realA):
+        super().__call__(realA)
+        return self.warpTensor(self.real_A, self.fake_B)

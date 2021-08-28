@@ -31,7 +31,7 @@ class FineGrainedSBIR_Dataset(Dataset):
         # Main time we need to override suffix is if training a Mimic network
         # Hardcode that case here so that we don't have to specify it in every experiment params file
         # (Note can always be overridden by a B_suffix setting in the params file)
-        elif Params.ModelName == 'Mimic' and phase == 'train':
+        elif Params.ModelName == 'Mimic' and Params.isTrue('isTrain'):
             self.B_suffix = 'Flow'
         else:
             self.B_suffix = 'B'
@@ -70,7 +70,7 @@ class FineGrainedSBIR_Dataset(Dataset):
         ] )
 
         if not ret_tensor:
-            self.A_transform = self.B_transform = torch.nn.Identity
+            self.A_transform = self.B_transform = torch.nn.Identity()
         else:
             self.A_transform = self.transform
             if hasattr(Params, 'InputNC') and Params.InputNC==len(self.A_suffixes):
