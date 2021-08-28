@@ -27,6 +27,8 @@ To train a Pix2pix baseline model, using the shoes dataset:
 
 All results during both training and testing are to be found under the 'checkpoints' folder, as are the saved trained models (on conclusion of training, only 'final.pt' is required to be kept)
 
+To test a trained Pix2pix model e.g. Pix2Pix_Shoes_WarpsOnly, run the command 'python test.py Pix2Pix_Shoes_WarpsOnly I2I'
+
 Nice presentable results from the two warp generating models can be produced by running:
     'python test.py RTN_Shoes TrioGen'
 and
