@@ -77,6 +77,9 @@ class FineGrainedSBIR_Dataset(Dataset):
                 self.A_transform = self.transform_greyscale
             self.B_transform = self.transform
 
+        if self.B_suffix=='Flow':
+            self.B_transform = torch.nn.Identity()
+
 
     def __len__(self):
         return len(self.all_data)
