@@ -14,6 +14,7 @@ BatchSize = 16
 NumEpochs = 15
 NumWarpIterations = 4
 TrainVGG = True
+BlurFlow = True
 
 LossLogFreq = 1000
 VisualizerFreq = 5000

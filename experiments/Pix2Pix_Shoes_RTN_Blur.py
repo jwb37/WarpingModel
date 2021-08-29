@@ -1,22 +1,26 @@
 import torch
 
-CheckpointFreq = 20
+CheckpointFreq = 130
 
-ExperimentName = 'Mimic (RTN Shoes)'
-ModelName = 'Mimic'
+ExperimentName = 'Pix2Pix (RTN Shoes, Blur)'
+ModelName = 'Pix2Pix'
+InputNC = 2
+OutputNC = 3
+
 Dataset = {
     'name': 'Shoes',
     # Use overwrite_dir to use results from another model in training this model
-    'overwrite_dir': 'checkpoints/RTN_Shoes/Shoes(no_blur)'
+    'overwrite_dir': 'checkpoints/RTN_Shoes/Shoes(blur)',
+    'A_suffixes': ['A','Warped']
 }
 Device = 'cuda'
 
 CropSize = 256
-BatchSize = 16
-NumEpochs = 40
+BatchSize = 1
+NumEpochs = 150
 
 LossLogFreq = 1000
-VisualizerFreq = 5000
+VisualizerFreq = 1500
 VisualizerNumExemplars = 1
 
 # Learning Rate
