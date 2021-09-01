@@ -56,3 +56,11 @@ In the 'datasets' folder:
     Name the image you wish to be warped 'A.png' and place it in the 'Single' directory
     Name the desired target for the warp 'B.png' and place it in the 'Single' directory
     Run the command 'python test.py RTN_SingleImage TrioGen'
+
+
+Acknowledgements
+----------------
+Pix2pix model adapted from code created by Jun-Yan Zhu and Taesung Park, and supported by Tongzhou Wang.
+Image-to-Image Translation with Conditional Adversarial Networks.
+Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, Alexei A. Efros. In CVPR 2017
+Original code repository is found at https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
