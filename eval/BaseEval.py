@@ -38,7 +38,8 @@ class BaseEval:
 
     def eval(self):
         Params.isTrain = False
-        self.load_dataset()        
+        self.load_dataset()
+        self.model.prepare_testing()   
         self.run_test()
 
     # ----------------------------------------------

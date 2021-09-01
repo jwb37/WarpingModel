@@ -8,63 +8,8 @@ import random
 
 from Params import Params
 from ..init_net import init_net
-
-
-class PatchSim(nn.Module):
-    """Calculate the similarity in selected patches"""
-    def __init__(self):
-        super(PatchSim, self).__init__()
-        self.patch_nums = Params.loss['num_patches']
-        self.patch_size = Params.loss['patch_size']
-        self.use_norm = Params.loss['use_norm']
-
-    def forward(self, feat, patch_ids=None):
-        """
-        Calculate the similarity for selected patches
-        """
-        B, C, W, H = feat.size()
-        feat = feat - feat.mean(dim=[-2, -1], keepdim=True)
-        feat = F.normalize(feat, dim=1) if self.use_norm else feat / np.sqrt(C)
-        query, key, patch_ids = self.select_patch(feat, patch_ids=patch_ids)
-        patch_sim = query.bmm(key) if self.use_norm else torch.tanh(query.bmm(key)/10)
-        if patch_ids is not None:
-            patch_sim = patch_sim.view(B, len(patch_ids), -1)
-
-        return patch_sim, patch_ids
-
-    def select_patch(self, feat, patch_ids=None):
-        """
-        Select the patches
-        """
-        B, C, W, H = feat.size()
-        pw, ph = self.patch_size, self.patch_size
-        feat_reshape = feat.permute(0, 2, 3, 1).flatten(1, 2) # B*N*C
-        if self.patch_nums > 0:
-            if patch_ids is None:
-                patch_ids = torch.randperm(feat_reshape.size(1), device=feat.device)
-                patch_ids = patch_ids[:int(min(self.patch_nums, patch_ids.size(0)))]
-            feat_query = feat_reshape[:, patch_ids, :]       # B*Num*C
-            feat_key = []
-            Num = feat_query.size(1)
-            if pw < W and ph < H:
-                pos_x, pos_y = patch_ids // W, patch_ids % W
-                # patch should in the feature
-                left, top = pos_x - int(pw / 2), pos_y - int(ph / 2)
-                left, top = torch.where(left > 0, left, torch.zeros_like(left)), torch.where(top > 0, top, torch.zeros_like(top))
-                start_x = torch.where(left > (W - pw), (W - pw) * torch.ones_like(left), left)
-                start_y = torch.where(top > (H - ph), (H - ph) * torch.ones_like(top), top)
-                for i in range(Num):
-                    feat_key.append(feat[:, :, start_x[i]:start_x[i]+pw, start_y[i]:start_y[i]+ph]) # B*C*patch_w*patch_h
-                feat_key = torch.stack(feat_key, dim=0).permute(1, 0, 2, 3, 4) # B*Num*C*patch_w*patch_h
-                feat_key = feat_key.reshape(B * Num, C, pw * ph)  # Num * C * N
-                feat_query = feat_query.reshape(B * Num, 1, C)  # Num * 1 * C
-            else: # if patch larger than features size, use B * C * N (H * W)
-                feat_key = feat.reshape(B, C, W*H)
-        else:
-            feat_query = feat.reshape(B, C, H*W).permute(0, 2, 1) # B * N (H * W) * C
-            feat_key = feat.reshape(B, C, H*W)  # B * C * N (H * W)
-
-        return feat_query, feat_key, patch_ids
+from .spatial_transformation_layer import SpatialTransformationLayer
+from .patch_sim import PatchSim
 
 
 class SpatialCorrelativeLoss(nn.Module):
@@ -75,6 +20,7 @@ class SpatialCorrelativeLoss(nn.Module):
         super(SpatialCorrelativeLoss, self).__init__()
         self.patch_sim = PatchSim()
         self.use_attn = Params.loss['use_attn']
+        self.attn_layer_types = Params.loss['attn_layer_types']
         self.attn_init_info = Params.loss['attn_init_info']
         self.loss_mode = Params.loss['ssim_compare_fn']
         self.T = Params.loss['T']
@@ -82,17 +28,40 @@ class SpatialCorrelativeLoss(nn.Module):
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.first_run = True
         self.visualizer = visualizer
+        self.conv_layers = dict()
 
-    def create_attn(self, feat):
+
+    def create_attn(self, feat, layer):
         """
         create the attention mapping layer used to transform features before building similarity maps
         :param feat: extracted features from a pretrained VGG or encoder for the similarity and dissimilarity map
         :return:
         """
-        net = ConvAttentionLayer()
-        net.build_net(feat)
-        net.init_params( **self.attn_init_info )
-        self.attn = net
+        attn_layers = []
+        conv_layers = []
+        for layer_code in self.attn_layer_types:
+            if layer_code == 'c':
+                l = ConvAttentionLayer()
+                attn_layers.append( l )
+                conv_layers.append( l )
+            elif layer_code == 's':
+                attn_layers.append( SpatialTransformationLayer() )
+
+        if not attn_layers:
+            raise ValueError("attn_type must be a list of letters c or s" )
+
+        for l in attn_layers:
+            l.build_net(feat)
+            feat = l(feat)
+            l.init_params(self.init_type, self.init_gain, self.gpu_ids)
+
+        # Extract the convolutional layers
+        if conv_layers:
+            self.conv_layers[layer] = nn.Sequential(*conv_layers)
+
+        attn_net = nn.Sequential(*attn_layers)
+        setattr(self, 'attn_%d' % layer, attn_net)
+
 
     def train_attn(self, real_A, fake_B, real_B):
         """
@@ -174,24 +143,24 @@ class SpatialCorrelativeLoss(nn.Module):
         sim_src, sim_tgt, sim_other = self.cal_sim(f_src, f_tgt, f_other)
         # calculate the spatial similarity for source and target domain
         loss = self.compare_sim(sim_src, sim_tgt, sim_other)
-        if self.visualizer:
+        if self.visualizer and self.visualizer.save_this_iter:
             chosen_patch_num = random.choice(range(Params.loss['num_patches']))
 
-            for name, ssim in (('SSim_WarpedA', sim_src), ('SSim_RealB', sim_tgt)):
+            for name, ssim in (('SSim_FakeB', sim_src), ('SSim_RealB', sim_tgt)):
                 out_ssim = ssim[:,chosen_patch_num,:]
                 out_ssim = out_ssim.view(-1, 1, Params.loss['patch_size'], Params.loss['patch_size'])
                 self.visualizer.add_tensor( name, out_ssim )
         return loss
 
-    def forward(self, realA, warpedA, realB, warp_grid):
+    def forward(self, realA, fakeB, realB, vgg_layer):
         if self.use_attn:
             if self.first_run:
-                self.create_attn(warpedA)
+                self.create_attn(fakeB, vgg_layer)
                 self.optimizer = Params.create_optimizer(self.parameters())
                 self.first_run = False
-            self.train_attn(realA, warpedA, realB)
+            self.train_attn(realA, fakeB, realB)
 
-        return self.loss(warpedA, realB)
+        return self.loss(fakeB, realB)
 
 
 class ConvAttentionLayer(nn.Module):

@@ -32,7 +32,7 @@ class Pix2PixModel(BaseModel):
         })
 
         # define loss functions
-        self.criterionGAN = networks.GANLoss('vanilla').to(Params.Device)
+        self.criterionGAN = networks.GANLoss('lsgan').to(Params.Device)
         self.criterionL1 = torch.nn.L1Loss()
         # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
         self.optimizer_G = Params.create_optimizer(self.netG.parameters())

@@ -2,10 +2,12 @@ python3 train.py RTN_Shoes
 
 python3 test.py RTN_Shoes FlowGen
 python3 test.py RTN_Shoes WarpedGen
+if [ -d checkpoints/RTN_Shoes/Shoes ]; then rm -rf checkpoints/RTN_Shoes/Shoes; fi
 mv checkpoints/RTN_Shoes/Shoes 'checkpoints/RTN_Shoes/Shoes(no_blur)'
 
 python3 test.py RTN_Shoes_Blur FlowGen
 python3 test.py RTN_Shoes_Blur WarpedGen
+if [ -d checkpoints/RTN_Shoes/Shoes ]; then rm -rf checkpoints/RTN_Shoes/Shoes; fi
 mv checkpoints/RTN_Shoes/Shoes 'checkpoints/RTN_Shoes/Shoes(blur)'
 
 python3 train.py Pix2Pix_Shoes_RTN

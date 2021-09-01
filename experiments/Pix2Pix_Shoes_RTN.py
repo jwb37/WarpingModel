@@ -24,5 +24,5 @@ VisualizerFreq = 1500
 VisualizerNumExemplars = 1
 
 # Learning Rate
-create_optimizer = lambda params: torch.optim.Adam(params, lr=1e-5, betas=(0.5, 0.999))
+create_optimizer = lambda params: torch.optim.Adam(params, lr=0.0002, betas=(0.5, 0.999))
 UseScheduler = False

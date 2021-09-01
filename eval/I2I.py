@@ -1,4 +1,5 @@
 import torch
+import torchvision.transforms as T
 import torchvision.transforms.functional as F
 from PIL import Image
 from tqdm import tqdm
@@ -15,6 +16,7 @@ from Params import Params
 class I2I(BaseEval):
     def __init__(self):
         super().__init__()
+        self.tens_to_img = T.ToPILImage()
 
     def load_dataset(self):
         self.dataset = create_dataset('test', ret_tensor=True)
@@ -32,7 +34,7 @@ class I2I(BaseEval):
                 sketch = data['imageA'].unsqueeze(dim=0)
                 tens = self.model(sketch)
 
-                tens = tens.detach().cpu().squeeze(dim=0)
+                tens = tens[0].detach().cpu()
                 tens = (tens + 1) / 2.0
                 fake_photo = F.to_pil_image(tens)
 
