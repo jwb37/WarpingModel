@@ -2,10 +2,23 @@ This project began as a PyTorch implementation of Recurrent Transformer Networks
 It has since grown to encompass a few related models, including a standard Pix2pix image translation model.
 
 
+Requirements
+------------
+Python 3+ (tested on 3.9)
+pytorch (tested on 1.7.1)
+torchvision (tested on 0.8.2)
+Pillow (tested on 8.3.1)
+tqdm
+cuda supported hardware/driver
+
+
 Instructions
 ------------
+Clone the repository to your local machine by running the command:
+    git clone https://github.com/jwb37/WarpingModel
+
 Download the fine-grained SBIR datasets from this page http://sketchx.eecs.qmul.ac.uk/downloads/
-Place the folders 'ChairV2' and 'ShoesV2' into the 'datasets' folder
+Place the folders 'ChairV2' and 'ShoeV2' into the 'datasets' folder
 In the 'datasets' folder, open a terminal and run the command 'python fix_chairs_dataset.py' to fix a couple of inconsistent file naming errors in the ChairV2 dataset
 
 To train an RTN warp generating model:
