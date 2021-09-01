@@ -8,7 +8,6 @@ import torchvision.transforms as transforms
 from PIL import Image
 
 from Params import Params
-from losses import get_loss_module
 
 from .BaseModel import BaseModel
 

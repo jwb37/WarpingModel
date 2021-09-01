@@ -1,7 +1,6 @@
 from Params import Params
 from .Mimic.ImageWarpNet import ImageWarpNet as MimicModel
 from .Affine.ImageWarpNet import ImageWarpNet as AffineModel
-from .Translation.ImageWarpNet import ImageWarpNet as TranslationModel
 from .Pix2Pix.pix2pix_model import Pix2PixModel
 
 def get_model(visualizer=None):

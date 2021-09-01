@@ -9,7 +9,6 @@ from PIL import Image
 from ..BaseWarpModel import BaseWarpModel
 
 from Params import Params
-from losses import get_loss_module
 from .WarpGenerator import WarpGenerator
 
 
