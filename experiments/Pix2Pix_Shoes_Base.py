@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 30
 
 ExperimentName = 'Pix2Pix (Base)'
 ModelName = 'Pix2Pix'

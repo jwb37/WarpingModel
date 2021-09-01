@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 130
+CheckpointFreq = 30
 
 ExperimentName = 'Pix2Pix (RTN Shoes, Blur)'
 ModelName = 'Pix2Pix'

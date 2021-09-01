@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 20
 
 ExperimentName = 'Mimic (RTN Shoes, Blur)'
 ModelName = 'Mimic'

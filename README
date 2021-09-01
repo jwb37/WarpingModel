@@ -35,6 +35,11 @@ and
     'python test.py Mimic_Shoes TrioGen'
 
 
+Train/Test all (slow!)
+----------------------
+Running the script './exp_chain1.sh' in the root directory will train/test a large number of models used in the project.
+Be aware that letting this script run to completion will take multiple days to complete.
+
 Other datasets
 --------------
 

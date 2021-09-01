@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 30
 
 ExperimentName = 'Pix2Pix (Mimic Shoes Warpsonly)'
 ModelName = 'Pix2Pix'

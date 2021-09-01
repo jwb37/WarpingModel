@@ -1,6 +1,6 @@
 import torch
 
-CheckpointFreq = 10
+CheckpointFreq = 50
 
 ExperimentName = 'Pix2Pix (Mimic Chairs)'
 ModelName = 'Pix2Pix'
